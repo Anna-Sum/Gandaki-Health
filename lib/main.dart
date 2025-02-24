@@ -1,25 +1,46 @@
+import 'dart:developer' as devtools show log;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:health_portal/pages/splash_page.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:sizer/sizer.dart';
 
-import 'constants/constant.dart';
-import 'pages/home_page.dart';
+import 'customs/theme_custom.dart';
+import 'dashboard/add_alert_page.dart';
+import 'firebase_services/firebase_initialization.dart';
+import 'pages/profile_page.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  devtools.log('Initializing app...');
+  WidgetsFlutterBinding.ensureInitialized();
+  MyFirebaseInitialization.firebaseInitialization();
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
+  devtools.log('Running app...');
+  runApp(ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: Constant.appName,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    devtools.log('Building app...');
+    final themeMode = ref.watch(themeProvider);
+    return Sizer(builder: (context, orientation, deviceType) {
+      devtools.log('Configuring material app...');
+      return MaterialApp(
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const MySplashPage(),
+          '/add_alert_page': (context) => MyAlertAddPage(),
+        },
+        debugShowCheckedModeBanner: false,
+        theme: MyAppTheme.lightTheme,
+        darkTheme: MyAppTheme.darkTheme,
+        themeMode: themeMode,
+      );
+    });
   }
 }

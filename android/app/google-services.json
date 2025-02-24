@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "501729055581",
+    "project_id": "health-portal-3db9f",
+    "storage_bucket": "health-portal-3db9f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:501729055581:android:2439b05ad943727b424eb4",
+        "android_client_info": {
+          "package_name": "com.example.health_portal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmiDzN89IZwLT4_8_q8rWu5--aXq9KrYA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

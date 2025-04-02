@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "501729055581",
-    "project_id": "health-portal-3db9f",
-    "storage_bucket": "health-portal-3db9f.firebasestorage.app"
+    "project_number": "481136583428",
+    "project_id": "myflutterdrive",
+    "storage_bucket": "myflutterdrive.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:501729055581:android:2439b05ad943727b424eb4",
+        "mobilesdk_app_id": "1:481136583428:android:9dcdad60165baae23f2651",
         "android_client_info": {
           "package_name": "com.example.health_portal"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBmiDzN89IZwLT4_8_q8rWu5--aXq9KrYA"
+          "current_key": "AIzaSyClOaHUfVAMRNJY30SG9_Fa6HcZVwJdAfo"
         }
       ],
       "services": {

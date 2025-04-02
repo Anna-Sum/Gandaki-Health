@@ -4,12 +4,10 @@ import 'package:sizer/sizer.dart';
 import '../constants/constant.dart';
 
 class MyAppTheme {
-  //light theme
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
     primaryColor: MyAppColors.primaryColor,
     scaffoldBackgroundColor: MyAppColors.scaffoldBackgroundColor,
-    //AppBar
     appBarTheme: AppBarTheme(
       foregroundColor: Colors.white,
       backgroundColor: MyAppColors.primaryColor,
@@ -22,7 +20,6 @@ class MyAppTheme {
         fontWeight: FontWeight.bold,
       ),
     ),
-    //BottomNavigationBar
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: MyAppColors.primaryColor,
       selectedItemColor: Colors.white,
@@ -33,22 +30,15 @@ class MyAppTheme {
         fontSize: 14.sp,
       ),
     ),
-    //splash
     splashFactory: InkRipple.splashFactory,
     highlightColor: MyAppColors.primaryColor,
-    //TextButton
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: MyAppColors.primaryColor,
-        // shape: const BeveledRectangleBorder(
-        //   side: BorderSide(color: MyAppColors.primaryColor, width: 0.4),
-        // ),
       ),
     ),
-    //Input decoration for TextField and TextformField
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      // fillColor: MyAppColors.textFieldFillColor,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8.0),
       ),
@@ -66,7 +56,6 @@ class MyAppTheme {
         ),
       ),
     ),
-    //checkbox
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.all(MyAppColors.primaryColor),
       checkColor: WidgetStateProperty.all(MyAppColors.scaffoldBackgroundColor),
@@ -78,7 +67,6 @@ class MyAppTheme {
         width: 2.0,
       ),
     ),
-    //ElevatedButton
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyAppColors.primaryColor,
@@ -88,7 +76,6 @@ class MyAppTheme {
         ),
       ),
     ),
-    //ScaffoldMessenger
     snackBarTheme: SnackBarThemeData(
       backgroundColor: MyAppColors.primaryColor,
       contentTextStyle: TextStyle(
@@ -99,12 +86,10 @@ class MyAppTheme {
     useMaterial3: true,
   );
 
-  //dark theme
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
     primaryColor: MyAppColors.darkPrimaryColor,
     scaffoldBackgroundColor: MyAppColors.scaffoldBackgroundColorDark,
-    //AppBar
     appBarTheme: AppBarTheme(
       foregroundColor: Colors.white,
       backgroundColor: MyAppColors.appBackgroundColorDark,
@@ -117,7 +102,6 @@ class MyAppTheme {
         fontWeight: FontWeight.bold,
       ),
     ),
-    //BottomNavigationBar
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: MyAppColors.appBackgroundColorDark,
       selectedItemColor: Colors.white,
@@ -128,22 +112,15 @@ class MyAppTheme {
         fontSize: 14.sp,
       ),
     ),
-    //splash
     splashFactory: InkRipple.splashFactory,
     highlightColor: MyAppColors.darkPrimaryColor,
-    //TextButton
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: MyAppColors.primaryColor,
-        // shape: const BeveledRectangleBorder(
-        //   side: BorderSide(color: MyAppColors.primaryColor, width: 0.4),
-        // ),
       ),
     ),
-    //Input decoration for TextField and TextformField
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      // fillColor: MyAppColors.textFieldFillColorDark,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8.0),
       ),
@@ -161,7 +138,6 @@ class MyAppTheme {
         ),
       ),
     ),
-    //checkbox
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.all(MyAppColors.primaryColor),
       checkColor:
@@ -174,7 +150,6 @@ class MyAppTheme {
         width: 2.0,
       ),
     ),
-    //ElevatedButton
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyAppColors.primaryColor,
@@ -184,7 +159,6 @@ class MyAppTheme {
         ),
       ),
     ),
-    //ScaffoldMessenger
     snackBarTheme: SnackBarThemeData(
       backgroundColor: MyAppColors.primaryColor,
       contentTextStyle: TextStyle(

@@ -1,10 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../customs/text_form_field_custom.dart';
 import '../firebase_services/firebase_database_services.dart';
 import 'auth_model.dart';
-import 'hive_initialization.dart';
 
 class DemoHive extends StatefulWidget {
   const DemoHive({super.key});
@@ -22,7 +22,6 @@ class _DemoHiveState extends State<DemoHive> {
   @override
   void initState() {
     super.initState();
-    // userBox = MyHiveService().getAuthBox();
   }
 
   void addAuthData() {
@@ -122,9 +121,13 @@ class HiveFunction {
     final userBox = Hive.box<AuthModel>('user_credential');
     if (userBox.isNotEmpty) {
       final firstUser = userBox.getAt(0);
-      print('User at index 0: ${firstUser?.userName}');
+      if (kDebugMode) {
+        print('User at index 0: ${firstUser?.userName}');
+      }
     } else {
-      print('No users found in Hive.');
+      if (kDebugMode) {
+        print('No users found in Hive.');
+      }
     }
   }
 }

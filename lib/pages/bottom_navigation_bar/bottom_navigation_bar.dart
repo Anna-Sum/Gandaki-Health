@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:health_portal/customs/app_bar_custom.dart';
 
 import '../../constants/constant.dart';
-import '../../dashboard/dashboard_page.dart';
+import '../../route_manager/route_manager.dart';
+import '../content_page.dart';
+import '../drawer_pages/drawer.dart';
 import '../home_page.dart';
 import '../profile_page.dart';
 import '../search_page.dart';
+import '../video_list_page.dart';
 import 'bottom_nav_bar_model.dart';
 
 class MyBottomNavigationBar extends StatefulWidget {
+  static const routeName = RouteNames.bottomNavigationBar;
   const MyBottomNavigationBar({super.key});
 
   @override
@@ -29,19 +32,19 @@ class _MyBottomNavigationBarState extends State<MyBottomNavigationBar> {
       selectedIcon: Icons.search,
       unSelectedIcon: Icons.search_outlined,
       label: 'Search',
-      page: SearchPage(),
+      page: MySearchPage(),
     ),
     BottomNavigationBarModel(
-      selectedIcon: Icons.dashboard,
-      unSelectedIcon: Icons.dashboard_outlined,
-      label: 'Dashboard',
-      page: MyDashBoardPage(),
+      selectedIcon: Icons.play_circle_fill,
+      unSelectedIcon: Icons.play_circle_filled_outlined,
+      label: 'Videos',
+      page: MyVideosListPage(),
     ),
     BottomNavigationBarModel(
       selectedIcon: Icons.book,
       unSelectedIcon: Icons.book_outlined,
-      label: 'Education',
-      page: Container(),
+      label: 'Content',
+      page: MyContentPage(),
     ),
     BottomNavigationBarModel(
       selectedIcon: Icons.person,
@@ -60,10 +63,10 @@ class _MyBottomNavigationBarState extends State<MyBottomNavigationBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: Constant.appName,
-        showNotification: true,
+      appBar: AppBar(
+        title: Text(Constant.appName),
       ),
+      drawer: MyDrawer(),
       body: Center(
         child: _navItems[_selectedIndex].page,
       ),

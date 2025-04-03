@@ -4,7 +4,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../customs/text_form_field_custom.dart';
 import '../firebase_services/firebase_database_services.dart';
 import 'auth_model.dart';
-import 'hive_initialization.dart';
 
 class DemoHive extends StatefulWidget {
   const DemoHive({super.key});

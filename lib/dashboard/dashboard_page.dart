@@ -1,9 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../customs/app_bar_custom.dart';
 import '../fire.dart';
+import '../route_manager/route_manager.dart';
+
+Future<void> _makePhoneCall(String phoneNumber) async {
+  final Uri launchUri = Uri(
+    scheme: 'tel',
+    path: phoneNumber,
+  );
+  if (await canLaunchUrl(launchUri)) {
+    await launchUrl(launchUri);
+  } else {
+    throw 'Could not launch $phoneNumber';
+  }
+}
+
+class BlinkingIcon extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  const BlinkingIcon({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+
+  @override
+  State<BlinkingIcon> createState() => _BlinkingIconState();
+}
+
+class _BlinkingIconState extends State<BlinkingIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            return Container(
+              width: widget.size * (1 + _animation.value * 0.5),
+              height: widget.size * (1 + _animation.value * 0.5),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                // color: widget.color.withOpacity(0.3 * (1 - _animation.value)),
+                color: widget.color.withValues(alpha: 0.3 * (1 - _animation.value)),
+              ),
+            );
+          },
+        ),
+        Icon(widget.icon, color: widget.color, size: widget.size),
+      ],
+    );
+  }
+}
 
 class MyDashBoardPage extends StatefulWidget {
+  static const routeName = RouteNames.myDashBoardPage;
   const MyDashBoardPage({super.key});
 
   @override
@@ -14,36 +95,31 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: CustomAppBar(title: 'Dashboard'),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(5.w),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              //
               Row(
                 children: [
-                  Icon(Icons.heart_broken),
+                  const Icon(Icons.favorite, color: Colors.red),
                   SizedBox(width: 2.w),
-                  Text('HealthAdmin'),
-                  Spacer(),
-                  IconButton(onPressed: () {}, icon: Icon(Icons.search)),
-                  IconButton(
-                      onPressed: () {
-                        myFirebase.registerUser(
-                          "admin@example.com",
-                          "password123",
-                          "John Doe",
-                        );
-                      },
-                      icon: Icon(Icons.notifications)),
-                  CircleAvatar(
+                  Text(
+                    'Admin Dashboard',
+                    style:
+                        TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  const CircleAvatar(
                     backgroundImage: NetworkImage(
                       'https://storage.googleapis.com/a1aa/image/TEU0hSkeW66tdxpWkzLrwtUdAax10DrV2PEskFnNwwU.jpg',
                     ),
                   ),
                 ],
               ),
-              //
+              SizedBox(height: 3.h),
               Row(
                 children: [
                   Expanded(
@@ -56,20 +132,42 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Active Alerts'),
-                                Icon(
-                                  Icons.notifications,
-                                  color: Colors.blue,
+                                Text(
+                                  'Total Alerts',
+                                  style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.bold),
                                 ),
+                                const Icon(Icons.add_alert_sharp,
+                                    color: Colors.blue),
                               ],
                             ),
                             SizedBox(height: 1.h),
-                            Text(
-                              '24',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            StreamBuilder<int>(
+                              stream: myFirebase.countAlertStream(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text(
+                                    'Error!',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                } else {
+                                  return Text(
+                                    snapshot.data == 0
+                                        ? '...'
+                                        : '${snapshot.data}',
+                                    style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -87,29 +185,39 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Total Users'),
-                                Icon(
-                                  Icons.group,
-                                  color: Colors.blue,
+                                Text(
+                                  'Total Users',
+                                  style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.bold),
                                 ),
+                                const Icon(Icons.group, color: Colors.blue),
                               ],
                             ),
                             SizedBox(height: 1.h),
                             StreamBuilder<int>(
                               stream: myFirebase.countUserStream(),
                               builder: (context, snapshot) {
-                                if (snapshot.hasData) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text(
+                                    'Error!',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                } else {
                                   return Text(
                                     snapshot.data == 0
                                         ? '...'
                                         : '${snapshot.data}',
                                     style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold),
                                   );
-                                } else {
-                                  return CircularProgressIndicator();
                                 }
                               },
                             ),
@@ -120,8 +228,102 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                   ),
                 ],
               ),
-              SizedBox(height: 1.h),
+              SizedBox(height: 3.h),
               Card(
+                color: Colors.red.shade50,
+                child: Padding(
+                  padding: EdgeInsets.all(4.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Emergency Services',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _makePhoneCall('1092'),
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      BlinkingIcon(
+                                        icon: Icons.medical_services,
+                                        color: Colors.red,
+                                        size: 6.w,
+                                      ),
+                                      SizedBox(height: 1.h),
+                                      Text(
+                                        'Hello Doctor',
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '1092',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _makePhoneCall('102'),
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      BlinkingIcon(
+                                        icon: Icons.local_hospital,
+                                        color: Colors.red,
+                                        size: 6.w,
+                                      ),
+                                      SizedBox(height: 1.h),
+                                      Text(
+                                        'Ambulance',
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '102',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 3.h),
+              Card(
+                color: Colors.red.shade100,
                 child: Padding(
                   padding: EdgeInsets.all(4.w),
                   child: Column(
@@ -129,69 +331,75 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                     children: [
                       Text(
                         'Quick Actions',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        children: [
-                          QuickActionCard(icon: Icons.add, label: 'New Alert'),
-                          QuickActionCard(
-                              icon: Icons.book, label: 'Add Resource'),
-                          QuickActionCard(
-                              icon: Icons.file_copy, label: 'New Content'),
-                          QuickActionCard(
-                              icon: Icons.feedback, label: 'Feedback'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Recent Alerts',
-                            style: TextStyle(
-                              fontSize: 18,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          Text(
-                            'View All',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        ],
                       ),
-                      SizedBox(height: 16),
-                      RecentAlertCard(
-                          title: 'COVID-19 Update',
-                          time: 'Updated 2h ago',
-                          status: 'Active'),
-                      SizedBox(height: 16),
-                      RecentAlertCard(
-                          title: 'Air Quality Warning',
-                          time: 'Updated 5h ago',
-                          status: 'Active'),
+                      SizedBox(height: 1.h),
+                      GridView.count(
+                        crossAxisCount: 3,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: quickActionItems.map((action) {
+                          return QuickActionCard(
+                            icon: action.icon,
+                            label: action.label,
+                          );
+                        }).toList(
+                          growable: false,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class DashboardCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const DashboardCard({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style:
+                      TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                ),
+                Icon(icon, color: color),
+              ],
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              value,
+              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
@@ -206,10 +414,25 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    List<Color> colors = [
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.cyan,
+      Colors.purple,
+      Colors.orange,
+      Colors.pink,
+      Colors.teal,
+      Colors.indigo,
+      Colors.yellow,
+    ];
     return InkWell(
       onTap: () {
-        // Perform action
-        Navigator.pushNamed(context, '/add_alert_page');
+        Navigator.pushNamed(
+            context,
+            quickActionItems
+                .firstWhere((element) => element.label == label)
+                .routeName);
       },
       child: Card(
         child: Padding(
@@ -217,9 +440,20 @@ class QuickActionCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.blue, size: 8.w),
+              Icon(
+                icon,
+                color: colors[quickActionItems.indexOf(quickActionItems
+                    .firstWhere((element) => element.label == label))],
+                size: 5.w,
+              ),
               SizedBox(height: 1.h),
-              Text(label),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
@@ -228,48 +462,47 @@ class QuickActionCard extends StatelessWidget {
   }
 }
 
-class RecentAlertCard extends StatelessWidget {
-  final String title;
-  final String time;
-  final String status;
+class QuickActionModel {
+  final String label;
+  final IconData icon;
+  final String routeName;
 
-  const RecentAlertCard(
-      {super.key,
-      required this.title,
-      required this.time,
-      required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 0.5.h),
-            Text(
-              time,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 1.w, vertical: 0.5.h),
-          decoration: BoxDecoration(
-            color: Colors.green[100],
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
+  QuickActionModel({
+    required this.label,
+    required this.icon,
+    required this.routeName,
+  });
 }
+
+List<QuickActionModel> quickActionItems = [
+  QuickActionModel(
+    label: 'New Alert',
+    icon: Icons.add,
+    routeName: RouteNames.alertAddPage,
+  ),
+  QuickActionModel(
+    label: 'New Content',
+    icon: Icons.file_copy,
+    routeName: RouteNames.addNewContentPage,
+  ),
+  QuickActionModel(
+    label: 'Add Video',
+    icon: Icons.play_circle_filled_outlined,
+    routeName: RouteNames.addVideoPage,
+  ),
+  QuickActionModel(
+    label: 'Feedback',
+    icon: Icons.feedback,
+    routeName: RouteNames.feedbackPage,
+  ),
+  QuickActionModel(
+    label: 'Add Web Link',
+    icon: Icons.language,
+    routeName: RouteNames.addWebLinkPage,
+  ),
+  QuickActionModel(
+    label: 'Add Hospitals',
+    icon: Icons.local_hospital,
+    routeName: RouteNames.addHospitalPage,
+  ),
+];

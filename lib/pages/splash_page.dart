@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../constants/constant.dart';
-import '../login/login_page.dart';
+import '../route_manager/route_manager.dart';
 
 class MySplashPage extends ConsumerStatefulWidget {
+  static const routeName = '/MySplashPage';
   const MySplashPage({super.key});
 
   @override
@@ -34,10 +35,8 @@ class _MySplashScreenState extends ConsumerState<MySplashPage>
     _controller.forward().whenComplete(() {
       stayHere
           ? _controller.repeat()
-          : Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const MyLoginPage()),
-            );
+          
+          : Navigator.pushNamed(context, RouteNames.loginPage);
     });
   }
 

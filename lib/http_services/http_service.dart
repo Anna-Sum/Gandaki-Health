@@ -14,14 +14,3 @@ Future<DialysisStatisticDataModel> fetchData() async {
     throw Exception('Failed to load data');
   }
 }
-
-// Future<T> fetchData<T>(
-//     String url, T Function(Map<String, dynamic>) fromJson) async {
-//   final response = await http.get(Uri.parse(url));
-
-//   if (response.statusCode == 200) {
-//     return fromJson(jsonDecode(response.body));
-//   } else {
-//     throw Exception('Failed to load data');
-//   }
-// }

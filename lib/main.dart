@@ -2,14 +2,13 @@ import 'dart:developer' as devtools show log;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:health_portal/pages/splash_page.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 import 'customs/theme_custom.dart';
-import 'dashboard/add_alert_page.dart';
 import 'firebase_services/firebase_initialization.dart';
 import 'pages/profile_page.dart';
+import 'route_manager/route_manager.dart';
 
 void main() async {
   devtools.log('Initializing app...');
@@ -31,15 +30,12 @@ class MyApp extends ConsumerWidget {
     return Sizer(builder: (context, orientation, deviceType) {
       devtools.log('Configuring material app...');
       return MaterialApp(
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const MySplashPage(),
-          '/add_alert_page': (context) => MyAlertAddPage(),
-        },
         debugShowCheckedModeBanner: false,
         theme: MyAppTheme.lightTheme,
         darkTheme: MyAppTheme.darkTheme,
         themeMode: themeMode,
+        initialRoute: RouteNames.splashPage,
+        onGenerateRoute: RouteGenerator.getRoute,
       );
     });
   }

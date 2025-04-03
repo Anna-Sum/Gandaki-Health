@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 class MyFirebase {
-  /// *** Singleton  ***
   static MyFirebase? _instance;
 
   MyFirebase._internal();
@@ -15,8 +14,6 @@ class MyFirebase {
     return _instance!;
   }
 
-  /// *** Firebase  ***
-  /// Register a new user and store inside a 'users' collection
   Future<void> registerUser(String email, String password, String name) async {
     try {
       UserCredential userCredential =
@@ -44,11 +41,24 @@ class MyFirebase {
     }
   }
 
-  /// count total users in the 'users' collection
   Stream<int> countUserStream() {
     try {
       return FirebaseFirestore.instance
           .collection("users")
+          .snapshots()
+          .map((snapshot) => snapshot.docs.length);
+    } catch (e) {
+      if (kDebugMode) {
+        log("Error: $e");
+      }
+    }
+    return Stream.value(0);
+  }
+
+  Stream<int> countAlertStream() {
+    try {
+      return FirebaseFirestore.instance
+          .collection("alert")
           .snapshots()
           .map((snapshot) => snapshot.docs.length);
     } catch (e) {

@@ -27,20 +27,17 @@ class MyHiveService {
     return _userBox!.get(key);
   }
 
-  //delete
   Future<void> deleteData(
       {required String boxName, required String key}) async {
     await _openBox();
     await _userBox!.delete(key);
   }
 
-  //clear box
   Future<void> clearBox({required String boxName}) async {
     await _openBox();
     await _userBox!.clear();
   }
 
-  //close box
   Future<void> closeBox({required String boxName}) async {
     await _openBox();
     await _userBox!.close();

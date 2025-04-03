@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-// ✅ StateNotifierProvider to Fetch and Store API Data
 final dialysisStatsProvider =
     StateNotifierProvider<DialysisStatsNotifier, Map<String, dynamic>>((ref) {
   return DialysisStatsNotifier();
@@ -13,7 +12,7 @@ final dialysisStatsProvider =
 
 class DialysisStatsNotifier extends StateNotifier<Map<String, dynamic>> {
   DialysisStatsNotifier() : super({}) {
-    fetchData(); // Fetch data when initialized
+    fetchData();
   }
 
   Future<void> fetchData() async {
@@ -32,10 +31,8 @@ class DialysisStatsNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 }
 
-// ✅ StateProvider for Search Query
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
-// ✅ Provider for Filtered Data
 final filteredDialysisStatsProvider = Provider<Map<String, dynamic>>((ref) {
   final query = ref.watch(searchQueryProvider).toLowerCase();
   final data = ref.watch(dialysisStatsProvider);
@@ -46,12 +43,12 @@ final filteredDialysisStatsProvider = Provider<Map<String, dynamic>>((ref) {
       data.entries.where((entry) => entry.key.toLowerCase().contains(query)));
 });
 
-class SearchPage extends ConsumerWidget {
-  const SearchPage({super.key});
+class MySearchPage extends ConsumerWidget {
+  static const routeName = '/MySearchPage';
+  const MySearchPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchQuery = ref.watch(searchQueryProvider);
     final stats = ref.watch(filteredDialysisStatsProvider);
 
     return Column(

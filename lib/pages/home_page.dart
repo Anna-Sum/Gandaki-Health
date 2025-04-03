@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:sizer/sizer.dart';
@@ -9,6 +11,7 @@ import '../constants/constant.dart';
 import '../http_services/dialysis_statistic_data_model.dart';
 
 class MyHomePage extends StatefulWidget {
+  static const routeName = '/MyHomePage';
   const MyHomePage({super.key});
 
   @override
@@ -29,29 +32,25 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Stream<QuerySnapshot> fetchRecentAlerts() {
+    return FirebaseFirestore.instance
+        .collection('alert')
+        .orderBy('date_time', descending: true)
+        .limit(5)
+        .snapshots();
+  }
+
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'Unknown time';
+    DateTime dateTime = timestamp.toDate();
+    return '${dateTime.hour}:${dateTime.minute}, ${dateTime.day}/${dateTime.month}/${dateTime.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-          ///
-
           FutureBuilder<DialysisStatisticDataModel>(
             future: fetchDialysisData(),
             builder: (context, snapshot) {
@@ -68,7 +67,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      //1. carousel slider
                       MyCarouselSlider(
                         items: [
                           _buildItem(
@@ -153,19 +151,59 @@ class _MyHomePageState extends State<MyHomePage> {
                           ),
                         ],
                       ),
-                      //
-
-                      //
                     ],
                   ),
                 );
               }
             },
           ),
+          SizedBox(height: 1.h),
+          _buildAlertList(),
         ],
       ),
     );
   }
+
+  Widget _buildAlertList() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              'Recent Alerts',
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+            ),
+          ),
+          StreamBuilder<QuerySnapshot>(
+            stream: fetchRecentAlerts(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                log("Error fetching alerts: ${snapshot.error}");
+                return Center(child: Text("Error fetching alerts"));
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                log("No data found in Firestore");
+                return Center(child: Text("No recent alerts found"));
+              }
+
+              for (var doc in snapshot.data!.docs) {
+                log("Fetched Alert: ${doc.data()}");
+              }
+
+              return Column(
+                children: snapshot.data!.docs.map((doc) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  return CustomAlertTile(
+                      title: data['title'] ?? 'No Title',
+                      description: data['description'],
+                      status: data['priority'] ?? 'Unknown',
+                      dateTime: formatTimestamp(data['date_time']));
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      );
 
   SizedBox _buildItem({required String title, required int number}) {
     return SizedBox(
@@ -196,7 +234,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-  //
 }
 
 class MyCarouselSlider extends StatelessWidget {
@@ -287,5 +324,99 @@ class RecentAlertCard extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class CustomAlertTile extends StatelessWidget {
+  const CustomAlertTile({
+    super.key,
+    required this.title,
+    required this.description,
+    required this.status,
+    required this.dateTime,
+  });
+
+  final String title;
+  final String description;
+  final String status;
+  final String dateTime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0x2F2195F3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 1.w,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[900],
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[800],
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  dateTime,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    status,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'normal':
+        return Colors.orange;
+      case 'low':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
   }
 }

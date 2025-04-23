@@ -1,12 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sizer/sizer.dart';
+import '../route_manager/route_manager.dart';
 
 import '../constants/constant.dart';
 import '../customs/text_form_field_custom.dart';
 import '../hive/hive_initialization.dart';
+import '../hive/auth_model.dart'; // Make sure you import the AuthModel class
 
 final authProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 final googleSignInProvider = Provider<GoogleSignIn>((ref) => GoogleSignIn());
@@ -21,10 +24,11 @@ class MyLoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<MyLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  MyHiveService myHiveService = MyHiveService();
+  final MyHiveService myHiveService = MyHiveService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscureText = true;
 
   Future<void> _login() async {
     setState(() => _isLoading = true);
@@ -37,15 +41,16 @@ class _LoginPageState extends ConsumerState<MyLoginPage> {
       );
       _handleSuccessfulLogin();
 
-      await myHiveService.putData(
-        boxName: 'userCredential',
-        key: 'email',
-        value: _emailController.text,
+      // Create an AuthModel instance and store it
+      AuthModel authModel = AuthModel(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
+
+      // Store the AuthModel object in Hive
       await myHiveService.putData(
-        boxName: 'userCredential',
-        key: 'password',
-        value: _passwordController.text,
+        key: 'authModel',
+        value: authModel, // Save AuthModel instead of just strings
       );
     } on FirebaseAuthException catch (e) {
       _handleLoginError('Login Failed: ${e.message}');
@@ -76,13 +81,41 @@ class _LoginPageState extends ConsumerState<MyLoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      await auth.signInWithCredential(credential);
+      // Sign in with the Google credential
+      UserCredential userCredential =
+          await auth.signInWithCredential(credential);
+
+      // Check if user document exists
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user?.uid)
+          .get();
+
+      // If the user does not exist in Firestore, create a new document
+      if (!userDoc.exists) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user?.uid)
+            .set({
+          'email': userCredential.user?.email,
+          'role': 'user', // Default role as 'user'
+          'userType': 'general', // Default userType as 'general'
+          'firstName': userCredential.user?.displayName?.split(' ')[0],
+          'lastName': userCredential.user?.displayName?.split(' ')[1] ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
       _handleSuccessfulLogin();
 
+      // Create an AuthModel instance and store it
+      AuthModel authModel = AuthModel(
+          googleUser.email, ''); // Password might be empty for Google login
+
+      // Store the AuthModel object in Hive
       await myHiveService.putData(
-        boxName: 'userCredential',
-        key: 'email',
-        value: googleUser.email,
+        key: 'authModel',
+        value: authModel,
       );
     } on FirebaseAuthException catch (e) {
       String message;
@@ -171,12 +204,41 @@ class _LoginPageState extends ConsumerState<MyLoginPage> {
                   SizedBox(height: 1.h),
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscureText,
+                    decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureText
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureText = !_obscureText;
+                          });
+                        },
+                      ),
+                      hintText: 'Password',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      return null;
+                    },
                   ),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pushNamed(
+                            context,
+                            RouteNames
+                                .forgotPasswordPage); // Corrected navigation route
+                      },
                       child: Text(
                         'Forgot password?',
                         style: Theme.of(context)
@@ -209,7 +271,7 @@ class _LoginPageState extends ConsumerState<MyLoginPage> {
                                 'Log In',
                                 style: Theme.of(context)
                                     .textTheme
-                                    .labelSmall
+                                    .labelLarge
                                     ?.copyWith(color: Colors.white),
                               ),
                             ),

@@ -12,7 +12,20 @@
           "package_name": "com.example.health_portal"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "481136583428-eghvksh55qrcdpvuo3jqs4kqbeqhcf7n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.health_portal",
+            "certificate_hash": "c83cf29d9f6a13ab9c80c468a2a68e6818e22250"
+          }
+        },
+        {
+          "client_id": "481136583428-d4c353jitsuvrcsera64f0qbq4325e4s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyClOaHUfVAMRNJY30SG9_Fa6HcZVwJdAfo"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "481136583428-d4c353jitsuvrcsera64f0qbq4325e4s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

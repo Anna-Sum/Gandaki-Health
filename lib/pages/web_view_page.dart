@@ -9,7 +9,14 @@ import '../customs/app_bar_custom.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const MaterialApp(home: MyWebListPage()));
+  runApp(const MaterialApp(
+      debugShowCheckedModeBanner: false, home: MyWebListPage()));
+}
+
+class WebsiteFields {
+  static const String title = 'title';
+  static const String link = 'link';
+  static const String isActive = 'isActive';
 }
 
 class MyWebListPage extends StatefulWidget {
@@ -27,11 +34,12 @@ class _MyWebListPageState extends State<MyWebListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Websites',
-      ),
+      appBar: CustomAppBar(title: 'Important Weblinks'),
       body: StreamBuilder<QuerySnapshot>(
-        stream: websites.orderBy('timestamp', descending: true).snapshots(),
+        stream: websites
+            .where(WebsiteFields.isActive, isEqualTo: true)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -41,33 +49,59 @@ class _MyWebListPageState extends State<MyWebListPage> {
           }
 
           final data = snapshot.data!.docs;
-
           if (data.isEmpty) {
-            return const Center(child: Text('No websites added yet'));
+            return const Center(child: Text('No active websites found.'));
           }
 
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemCount: data.length,
             itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Card(
-                  color: Colors.teal[200],
-                  child: ListTile(
-                    title: Text('${data[index]['title']}'),
-                    subtitle: Text(data[index]['link']),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MyWebViewPage(
-                            link: data[index]['link'],
-                            title: data[index]['title'],
-                          ),
-                        ),
-                      );
-                    },
+              final doc = data[index];
+              final title = doc[WebsiteFields.title];
+              final link = doc[WebsiteFields.link];
+
+              return Material(
+                elevation: 2,
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  tileColor: Colors.grey.shade100,
+                  title: Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Colors.teal,
+                    ),
                   ),
+                  subtitle: Text(
+                    link,
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  trailing: const Icon(Icons.open_in_new, color: Colors.teal),
+                  onTap: () {
+                    final uri = Uri.tryParse(link);
+                    if (uri == null || !uri.isAbsolute) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid link format')),
+                      );
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            MyWebViewPage(link: link, title: title),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -79,7 +113,9 @@ class _MyWebListPageState extends State<MyWebListPage> {
 }
 
 class MyWebViewPage extends StatefulWidget {
+  static const routeName = '/MyWebViewPage';
   const MyWebViewPage({super.key, required this.link, required this.title});
+
   final String link;
   final String title;
 
@@ -99,8 +135,8 @@ class _MyWebViewPageState extends State<MyWebViewPage> {
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (url) => setState(() => isLoading = true),
-          onPageFinished: (url) => setState(() => isLoading = false),
+          onPageStarted: (_) => setState(() => isLoading = true),
+          onPageFinished: (_) => setState(() => isLoading = false),
           onWebResourceError: (error) {
             setState(() => isLoading = false);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -115,21 +151,15 @@ class _MyWebViewPageState extends State<MyWebViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: widget.title,
-        
-        
-        
-        
-        
-        
-      ),
+      appBar: CustomAppBar(title: widget.title),
       body: Stack(
         children: [
           WebViewWidget(controller: controller),
           if (isLoading)
             const Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+              ),
             ),
         ],
       ),

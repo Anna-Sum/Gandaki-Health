@@ -1,9 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../customs/text_form_field_custom.dart';
-import '../firebase_services/firebase_database_services.dart';
+import '../customs/text_form_field_custom.dart'; // Assuming this is your custom TextFormField widget
 import 'auth_model.dart';
 
 class DemoHive extends StatefulWidget {
@@ -22,6 +20,13 @@ class _DemoHiveState extends State<DemoHive> {
   @override
   void initState() {
     super.initState();
+    _initializeHiveBox();
+  }
+
+  // Initialize the Hive box
+  Future<void> _initializeHiveBox() async {
+    userBox = await Hive.openBox<AuthModel>('user_credential');
+    setState(() {}); // Update UI after box is opened
   }
 
   void addAuthData() {
@@ -68,8 +73,13 @@ class _DemoHiveState extends State<DemoHive> {
 
   @override
   Widget build(BuildContext context) {
+    // If the box is not opened yet, show a loading indicator.
+    if (!userBox.isOpen) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Hive Demo')),
+      appBar: AppBar(title: Text('Hive Demo')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -80,54 +90,22 @@ class _DemoHiveState extends State<DemoHive> {
                 onPressed: addAuthData, child: const Text('Add User')),
             Expanded(
               child: ListView.builder(
-                itemCount: userBox.length,
+                itemCount: userBox.keys.length, // Length of keys in the box
                 itemBuilder: (context, index) {
-                  final key = userBox.keyAt(index);
-                  final auth = userBox.get(key) as AuthModel;
+                  final key = userBox.keys
+                      .toList()[index]; // Get the key at the given index
+                  final auth = userBox.get(key)
+                      as AuthModel; // Retrieve the AuthModel using the key
                   return ListTile(
                     title: Text(auth.userName),
                     subtitle: Text(auth.password),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.info),
-                      onPressed: () => showUserDataDialog(context),
-                    ),
                   );
                 },
               ),
-            ),
-            ElevatedButton(
-              onPressed: () => HiveFunction.fetch(),
-              child: const Text('Fetch Data'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                FirebaseDatabaseServices.createCollectionWithCustomDocumentId(
-                  collectionName: 'health',
-                  documentId: 'hello',
-                  data: {'name': 'health'},
-                );
-              },
-              child: const Text('Add to Collection'),
             ),
           ],
         ),
       ),
     );
-  }
-}
-
-class HiveFunction {
-  static void fetch() {
-    final userBox = Hive.box<AuthModel>('user_credential');
-    if (userBox.isNotEmpty) {
-      final firstUser = userBox.getAt(0);
-      if (kDebugMode) {
-        print('User at index 0: ${firstUser?.userName}');
-      }
-    } else {
-      if (kDebugMode) {
-        print('No users found in Hive.');
-      }
-    }
   }
 }

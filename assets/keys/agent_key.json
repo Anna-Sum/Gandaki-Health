@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "healthassistant-qrxp",
+  "private_key_id": "99d851a09dd289d1644a87bf61294bec223175ce",
+  "private_key": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7T+COY8NlC9dq\n/KwV1Lv/0lnmvG06TGJMrxXoKuNQRjECkIKm85Xhv+Qiv+2fAxVgURkXYXJz5r4l\ny7+M/cIamtzvJj6ZxQa6nZkAStJ63isQHd38thHv2VOUTHpGvcRtzcVFBC/w9XD2\nZS6BgrcGGxAxEqQz/DY4Vrfs42ScgP8WdgLRLsZvXxWYunQxHlir7R7fVY/8pjRb\n5FEid3czFVGv3U266uMcHtXSHhRehGpsiGNg1UrkEfGP1B88YU6NmAYmvJBbadvt\nGjJKp+mFSBvEK2HmfuxDr/0SGChgctcmL+yvKKOxv85M0PIYKCnZWAeq0ewdj87X\nOcegUvcrAgMBAAECggEAOIPNt3h/RFYRzVxmGYIhpPqVGGqCtEPGpuduvyltg1Ni\nRylN2kyFTOMmVJu++KqoAPMHFIhYzYJxnZq/dS09KuTNwzQxUBjjwlt5hd6Nafft\nW0P/rddLSygxsP1wKTbpdM3QdtXgFx4e0qDNqtLDIQr6VCwRMgQnYdE8VjN3sEYv\nthZcvYV8b7GXYOfKtZDAif3J5E0ERWBerSERhyi6h+Da2OXhC5JaGq3coEXFhIJ8\nW4XTFlVV4pd5KnrgXNtJoqZGfFrrVjOOFZIL/xV9Lck251YKSo6gc0zzOGlOmhfp\nvOUy8J8trxhUTk9QpsW3P1QORALirf6uZdh6/m8nxQKBgQD/rC/tl9uXk6lwc+KV\nxSqEgN/1fwcx7A1pyL+R3t47qJAh6DgAs0umVJ82SjYwF+TxNlQzftRJyu8Z+GL2\n50s2jhv2QdLTrYOM5Z+cSmEF74J8/c3J2jq/t+2UlEnRzBf9KxVm/iAlDhQxJyNp\n8EqOg6Iu3X6S4fNROi+kUsEFXwKBgQC7jUfM8cdrGLazBdIoa4GcwoxsBIxSk3qX\ntshMvD0C55uiFroqRMvPc36skqchAuSE/+CidVgMTe8rOjMtecMbI2tLYdliCddq\nmPBcSInlthGVAYhKTVzr3z2RsHqN0UtgQLSYerof9QiB0/hdI7LUtQnyaNub+Wdx\ne2s2t7K1tQKBgQCXStANu4fxGSrx5VFWqRaw1AYzIpkiXHnPeECMVCKTkPrBZcYF\n/BMu+PJB0QZhzTHn3utSkaGTjSeR6Z6+Vj32qX84aNkV855duN+LP6RMO9+ukQ2+\nfYm4O2G2Q02vfSNQ57bBfG2PH9apA2z8Wnnz/UbyjpVA2738+f6JMYMQ5wKBgFSy\nbKZk2YXH11npWwrd4d6FDR0KwMPZzhcNeE8PAw54wZPlZ5UHFHNO2PneEJOb1s8p\nLqyvCWAlIckHs2zp++4ZhK66NY1MnHeLMaC7MWsHWdFMq9vCLCBo5EkSxYWd6shA\n8E2bvsoHwhu/Of31zSC50RAjwmkhrFFXRwei1ZWxAoGARw5RfS81Ld3hvVgwcdAn\nsNzOcFgbCnkD9Ilt9zoYh29GkuA57nFtGYnmCocz5oj+wJcgeYRJt2nAqVZE8P9h\n7csvvueP69h6jiRCWDEeC9LUBig/1ZnIKntqvGylpdPNIDtCXdSt4Gvao7HLg4EJ\nrfAVx5lg5uHQYLRwNfkALEI=\n-----END PRIVATE KEY-----\n",
+  "client_email": "gandakihealth@healthassistant-qrxp.iam.gserviceaccount.com",
+  "client_id": "105172257807742743675",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gandakihealth%40healthassistant-qrxp.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

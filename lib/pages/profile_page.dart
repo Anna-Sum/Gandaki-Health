@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -54,21 +53,17 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
         return;
       }
 
-      log("Fetching data for user ID: ${user.uid}");
-
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
 
       if (userDoc.exists) {
-        log("User document found: ${userDoc.data()}");
         setState(() {
           _userData = userDoc.data() as Map<String, dynamic>;
           _isLoading = false;
         });
       } else {
-        log("User document does not exist in Firestore.");
         setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -78,6 +73,9 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
   }
 
   Future<void> _signOut() async {
+    bool confirm = await _showConfirmDialog();
+    if (!confirm) return;
+
     setState(() {
       _isSigningOut = true;
     });
@@ -86,7 +84,6 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
       await FirebaseAuth.instance.signOut();
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/MyLoginPage');
-        log("Signed out successfully.");
       }
     } catch (e) {
       log("Error signing out: $e");
@@ -104,61 +101,116 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
     }
   }
 
+  Future<bool> _showConfirmDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Log Out'),
+            content: const Text('Are you sure you want to log out?'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Log Out')),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeNotifier = ref.read(themeProvider.notifier);
     final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          _buildListTile(
-            title: 'Profile',
-            onTap: _showProfileDialog,
-          ),
-          SwitchListTile(
-            title: Text(
-              isDarkMode ? "Dark Mode" : "Light Mode",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+    return Scaffold(
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  _buildSectionTitle('Account'),
+                  _buildListTile(
+                    icon: Icons.person,
+                    title: 'View Profile',
+                    onTap: _showProfileDialog,
                   ),
-            ),
-            value: isDarkMode,
-            onChanged: (value) => themeNotifier.toggleTheme(),
-            visualDensity: VisualDensity(horizontal: 4, vertical: 2),
-            dense: true,
-            controlAffinity: ListTileControlAffinity.trailing,
-          ),
-          _buildListTile(
-            title: 'Language',
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: Text('Language'),
-                    content: Text('Coming Soon'),
-                  );
-                },
-              );
-            },
-            trailing: Icon(Icons.arrow_drop_down),
-          ),
-          _buildListTile(
-            title: 'Log Out',
-            onTap: _isSigningOut ? null : _signOut,
-            titleColor: Colors.red,
-            trailing: _isSigningOut
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : null,
-          ),
-        ],
+                  const SizedBox(height: 16),
+                  _buildSectionTitle('Settings'),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.brightness_6),
+                    title: Text(isDarkMode ? "Dark Mode" : "Light Mode"),
+                    value: isDarkMode,
+                    onChanged: (value) => themeNotifier.toggleTheme(),
+                    dense: true,
+                  ),
+                  _buildListTile(
+                    icon: Icons.language,
+                    title: 'Language',
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (context) => const AlertDialog(
+                        title: Text('Language'),
+                        content: Text('Coming Soon...'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle('Others'),
+                  _buildListTile(
+                    icon: Icons.logout,
+                    title: 'Log Out',
+                    titleColor: Colors.red,
+                    onTap: _isSigningOut ? null : _signOut,
+                    trailing: _isSigningOut
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                  ),
+                ],
+              ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildListTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback? onTap,
+    Widget? trailing,
+    Color? titleColor,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: titleColor ?? Colors.blueAccent),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: titleColor ?? Theme.of(context).textTheme.bodyMedium?.color,
+        ),
+      ),
+      onTap: onTap,
+      trailing: trailing,
     );
   }
 
@@ -169,31 +221,30 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
         title: Center(
           child: Text(
             'Your Profile',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
                 ),
           ),
         ),
-        content: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _userData != null
-                    ? [
-                        _buildProfileInfo(
-                            'First Name', _userData?['firstName']),
-                        _buildProfileInfo(
-                            'Middle Name', _userData?['middleName']),
-                        _buildProfileInfo('Last Name', _userData?['lastName']),
-                        _buildProfileInfo('Email', _userData?['email']),
-                      ]
-                    : [const Text("No user data found!")],
+        content: _userData == null
+            ? const Text("No user data found!")
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProfileInfo('First Name', _userData?['firstName']),
+                    _buildProfileInfo('Middle Name', _userData?['middleName']),
+                    _buildProfileInfo('Last Name', _userData?['lastName']),
+                    _buildProfileInfo('Email', _userData?['email']),
+                    _buildProfileInfo('User Type', _userData?['userType']),
+                  ],
+                ),
               ),
         actions: [
           TextButton(
-            child: const Text('Close'),
             onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -201,40 +252,20 @@ class _MyProfilePageState extends ConsumerState<MyProfilePage> {
   }
 
   Widget _buildProfileInfo(String label, String? value) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      margin: const EdgeInsets.all(8),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0x48607D8B),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0x489E9E9E)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.blueAccent),
+        ),
+        child: Text(
+          "$label: ${value ?? 'N/A'}",
+          style: const TextStyle(fontSize: 16),
+        ),
       ),
-      child: Text(
-        "$label: ${value ?? 'N/A'}",
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-      ),
-    );
-  }
-
-  Widget _buildListTile({
-    required String title,
-    required VoidCallback? onTap,
-    Color? titleColor,
-    Widget? trailing,
-  }) {
-    return ListTile(
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: titleColor,
-            ),
-      ),
-      onTap: onTap,
-      trailing: trailing,
     );
   }
 }

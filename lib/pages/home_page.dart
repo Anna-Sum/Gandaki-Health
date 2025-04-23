@@ -1,14 +1,154 @@
-import 'dart:convert';
 import 'dart:developer';
-
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
-import '../constants/constant.dart';
-import '../http_services/dialysis_statistic_data_model.dart';
+Widget _buildDiseaseCarousel() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('diseaseStats')
+        .where('isActive', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return const Center(child: Text('Error loading stats'));
+      }
+
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const Center(child: Text('No active disease stats'));
+      }
+
+      final items = snapshot.data!.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final disease = data['disease'] ?? 'Unknown';
+        final count = data['count'] ?? 0;
+
+        return Card(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: const Color.fromARGB(255, 239, 120, 109),
+          elevation: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Row(
+              children: [
+                const Icon(Icons.coronavirus, color: Colors.white, size: 60),
+                const SizedBox(width: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      disease,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '$count reported cases',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList();
+
+      return CarouselSlider(
+        items: items,
+        options: CarouselOptions(
+          height: 14.h,
+          autoPlay: true,
+          enlargeCenterPage: true,
+          viewportFraction: 0.8,
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _makePhoneCall(String phoneNumber) async {
+  final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+  if (await canLaunchUrl(launchUri)) {
+    await launchUrl(launchUri);
+  } else {
+    throw 'Could not launch $phoneNumber';
+  }
+}
+
+class BlinkingIcon extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  const BlinkingIcon({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+
+  @override
+  State<BlinkingIcon> createState() => _BlinkingIconState();
+}
+
+class _BlinkingIconState extends State<BlinkingIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            return Container(
+              width: widget.size * (1 + _animation.value * 0.0),
+              height: widget.size * (1 + _animation.value * 0.0),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.color
+                    .withAlpha(((0.5 * (1 - _animation.value)) * 255).toInt()),
+              ),
+            );
+          },
+        ),
+        Icon(widget.icon, color: widget.color, size: widget.size),
+      ],
+    );
+  }
+}
 
 class MyHomePage extends StatefulWidget {
   static const routeName = '/MyHomePage';
@@ -19,312 +159,276 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Future<DialysisStatisticDataModel> fetchDialysisData() async {
-    final response = await http.get(
-      Uri.parse(
-          'https://dialysis.gandakidata.com/api/getDialysisStatisticData'),
-    );
-
-    if (response.statusCode == 200) {
-      return DialysisStatisticDataModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to load data');
-    }
-  }
-
   Stream<QuerySnapshot> fetchRecentAlerts() {
     return FirebaseFirestore.instance
         .collection('alert')
+        .where('active', isEqualTo: true)
         .orderBy('date_time', descending: true)
-        .limit(5)
+        .limit(3)
         .snapshots();
   }
 
   String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown time';
     DateTime dateTime = timestamp.toDate();
-    return '${dateTime.hour}:${dateTime.minute}, ${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    return '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}, ${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          FutureBuilder<DialysisStatisticDataModel>(
-            future: fetchDialysisData(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              } else if (!snapshot.hasData) {
-                return Center(child: Text("No Data Available"));
-              } else {
-                final data = snapshot.data!;
-                return Padding(
-                  padding: EdgeInsets.all(8.0),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              SizedBox(height: 1.h),
+
+              _buildDiseaseCarousel(),
+              SizedBox(height: 1.h),
+
+              // Emergency Services
+              Card(
+                color: const Color.fromARGB(255, 249, 222, 222),
+                child: Padding(
+                  padding: EdgeInsets.all(4.w),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      MyCarouselSlider(
-                        items: [
-                          _buildItem(
-                            title: 'Total Hospitals',
-                            number: data.totalHospital,
+                      Text(
+                        'Emergency Services',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _makePhoneCall('1092'),
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      BlinkingIcon(
+                                        icon: Icons.medical_services,
+                                        color: Colors.red,
+                                        size: 10.w,
+                                      ),
+                                      SizedBox(height: 1.h),
+                                      Text('Hello Doctor',
+                                          style: TextStyle(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.bold)),
+                                      Text('1092',
+                                          style: TextStyle(
+                                              fontSize: 14.sp,
+                                              color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          _buildItem(
-                            title: 'Dialysis Units',
-                            number: data.dialysisUnit,
-                          ),
-                          _buildItem(
-                            title: 'Total Machine',
-                            number: data.totalMachine,
-                          ),
-                          _buildItem(
-                            title: 'Active Machine',
-                            number: data.activeMachine,
-                          ),
-                          _buildItem(
-                            title: 'Damaged Machine',
-                            number: data.damagedMachine,
-                          ),
-                          _buildItem(
-                            title: 'Operational Dialysis Bed',
-                            number: data.operationalDialysisBed,
-                          ),
-                          _buildItem(
-                            title: 'Total Nephrologist',
-                            number: data.totalNephrologist,
-                          ),
-                          _buildItem(
-                            title: 'Total MDGP',
-                            number: data.totalMdgp,
-                          ),
-                          _buildItem(
-                            title: 'Total Medical Officer',
-                            number: data.totalMedicalOfficer,
-                          ),
-                          _buildItem(
-                            title: 'Total Staff Nurse',
-                            number: data.totalStaffNurse,
-                          ),
-                          _buildItem(
-                            title: 'Total Biomedical Technician',
-                            number: data.totalBiomedicalTechnician,
-                          ),
-                          _buildItem(
-                            title: 'Total Helper',
-                            number: data.totalHelper,
-                          ),
-                          _buildItem(
-                            title: 'Trained MDGP',
-                            number: data.trainedMdgp,
-                          ),
-                          _buildItem(
-                            title: 'Trained Medical Officer',
-                            number: data.trainedMedicalOfficer,
-                          ),
-                          _buildItem(
-                            title: 'Trained Staff Nurse',
-                            number: data.trainedStaffNurse,
-                          ),
-                          _buildItem(
-                            title: 'Trained Biomedical Technician',
-                            number: data.trainedBiomedicalTechnician,
-                          ),
-                          _buildItem(
-                            title: 'Trained Helper',
-                            number: data.trainedHelper,
-                          ),
-                          _buildItem(
-                            title: 'Waiting Patient',
-                            number: data.waitingPatient,
-                          ),
-                          _buildItem(
-                            title: 'Active Patient',
-                            number: data.activePatient,
-                          ),
-                          _buildItem(
-                            title: 'Registered Patient',
-                            number: data.registeredPatient,
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _makePhoneCall('102'),
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      BlinkingIcon(
+                                        icon: Icons.local_hospital,
+                                        color: Colors.red,
+                                        size: 10.w,
+                                      ),
+                                      SizedBox(height: 1.h),
+                                      Text('Ambulance',
+                                          style: TextStyle(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.bold)),
+                                      Text('102',
+                                          style: TextStyle(
+                                              fontSize: 14.sp,
+                                              color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                );
-              }
-            },
+                ),
+              ),
+              SizedBox(height: 1.h),
+
+              // Additional Services Section with Navigation Icons
+              Card(
+                color: const Color.fromARGB(255, 255, 255, 255),
+                child: Padding(
+                  padding: EdgeInsets.all(4.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Additional Services',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepPurple,
+                            ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/MyWebListPage');
+                              },
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.language,
+                                        color: Colors.deepPurple,
+                                        size: 8.w,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text('Web Links',
+                                          style: TextStyle(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/FeedbackPage');
+                              },
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.feedback,
+                                        color: Colors.deepPurple,
+                                        size: 8.w,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text('Feedback',
+                                          style: TextStyle(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/chatbotPage');
+                              },
+                              child: Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(2.w),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.chat,
+                                        color: Colors.deepPurple,
+                                        size: 8.w,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text('Assistant',
+                                          style: TextStyle(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 1.h),
+
+              // Recent Alerts
+              _buildAlertList(),
+              SizedBox(height: 2.h),
+            ],
           ),
-          SizedBox(height: 1.h),
-          _buildAlertList(),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildAlertList() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Text(
-              'Recent Alerts',
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+  Widget _buildAlertList() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                'Recent Alerts',
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-          StreamBuilder<QuerySnapshot>(
-            stream: fetchRecentAlerts(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                log("Error fetching alerts: ${snapshot.error}");
-                return Center(child: Text("Error fetching alerts"));
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                log("No data found in Firestore");
-                return Center(child: Text("No recent alerts found"));
-              }
+            StreamBuilder<QuerySnapshot>(
+              stream: fetchRecentAlerts(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  log("Error fetching alerts: ${snapshot.error}");
+                  return Center(child: Text("Error fetching alerts"));
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text("No recent alerts found"));
+                }
 
-              for (var doc in snapshot.data!.docs) {
-                log("Fetched Alert: ${doc.data()}");
-              }
-
-              return Column(
-                children: snapshot.data!.docs.map((doc) {
-                  var data = doc.data() as Map<String, dynamic>;
-                  return CustomAlertTile(
+                return Column(
+                  children: snapshot.data!.docs.map((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    return CustomAlertTile(
                       title: data['title'] ?? 'No Title',
                       description: data['description'],
                       status: data['priority'] ?? 'Unknown',
-                      dateTime: formatTimestamp(data['date_time']));
-                }).toList(),
-              );
-            },
-          ),
-        ],
-      );
-
-  SizedBox _buildItem({required String title, required int number}) {
-    return SizedBox(
-      height: double.infinity,
-      width: 50.w,
-      child: Card(
-        elevation: 2.h,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              Text(
-                '$number',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: MyAppColors.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.sp,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class MyCarouselSlider extends StatelessWidget {
-  const MyCarouselSlider({super.key, this.items});
-
-  final List<Widget>? items;
-
-  @override
-  Widget build(BuildContext context) {
-    return CarouselSlider(
-      items: items,
-      options: CarouselOptions(
-        viewportFraction: 0.7,
-        aspectRatio: 3.5,
-        autoPlay: true,
-      ),
-    );
-  }
-}
-
-class QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const QuickActionCard({super.key, required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {},
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(4.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.blue, size: 8.w),
-              SizedBox(height: 1.h),
-              Text(label),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class RecentAlertCard extends StatelessWidget {
-  final String title;
-  final String time;
-  final String status;
-
-  const RecentAlertCard(
-      {super.key,
-      required this.title,
-      required this.time,
-      required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 0.5.h),
-            Text(
-              time,
-              style: TextStyle(color: Colors.grey),
+                      dateTime: formatTimestamp(data['date_time']),
+                    );
+                  }).toList(),
+                );
+              },
             ),
           ],
         ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 1.w, vertical: 0.5.h),
-          decoration: BoxDecoration(
-            color: Colors.green[100],
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
+      );
 }
 
 class CustomAlertTile extends StatelessWidget {
@@ -345,9 +449,7 @@ class CustomAlertTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4),
         padding: EdgeInsets.all(16),
@@ -357,7 +459,6 @@ class CustomAlertTile extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 1.w,
           children: [
             Text(
               title,
@@ -395,7 +496,6 @@ class CustomAlertTile extends StatelessWidget {
                     status,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
                         ),
                   ),
                 ),
@@ -408,13 +508,13 @@ class CustomAlertTile extends StatelessWidget {
   }
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'high':
+    switch (status) {
+      case 'High':
         return Colors.red;
-      case 'normal':
+      case 'Normal':
         return Colors.orange;
-      case 'low':
-        return Colors.blue;
+      case 'Low':
+        return Colors.green;
       default:
         return Colors.grey;
     }

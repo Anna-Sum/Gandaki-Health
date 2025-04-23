@@ -24,6 +24,8 @@ class _MySignUpPageState extends State<MySignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // Track password visibility
+  String? _userType = 'general';
 
   String? _validateFirstName(String? value) {
     if (value == null || value.isEmpty) {
@@ -73,14 +75,18 @@ class _MySignUpPageState extends State<MySignUpPage> {
         );
 
         String uid = userCredential.user!.uid;
+
+        // Store user data including the selected user type
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': _firstNameController.text.trim(),
           'middleName': _midNameController.text.trim(),
           'lastName': _lastNameController.text.trim(),
           'email': _emailController.text.trim(),
           'createdAt': FieldValue.serverTimestamp(),
-          'role': 'user',
+          'role': 'user', // Default role (you can leave this out if not needed)
+          'userType': _userType, // New field to store user type
         });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Sign-up successful!')),
@@ -142,8 +148,49 @@ class _MySignUpPageState extends State<MySignUpPage> {
               TextFormField(
                 controller: _passwordController,
                 validator: _validatePassword,
-                obscureText: true,
+                obscureText: !_isPasswordVisible, // Toggle password visibility
+                decoration: InputDecoration(
+                  hintText: 'Enter your password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
               ),
+              SizedBox(height: 3.h),
+
+              // New: User type dropdown
+              _buildTextLabel('Select User Type'),
+              DropdownButtonFormField<String>(
+                value: _userType,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'general',
+                    child: Text('General User'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'healthcare',
+                    child: Text('Healthcare Provider'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _userType = value;
+                  });
+                },
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
               SizedBox(height: 5.h),
               Center(
                 child: SizedBox(

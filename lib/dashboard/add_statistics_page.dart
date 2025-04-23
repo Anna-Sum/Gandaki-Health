@@ -2,40 +2,40 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../constants/firebase_constant.dart';
 
-class AddWebLinkPage extends StatefulWidget {
+class AddStatisticsPage extends StatefulWidget {
   final DocumentSnapshot? contentData;
 
-  const AddWebLinkPage({super.key, this.contentData});
+  const AddStatisticsPage({super.key, this.contentData});
 
   @override
-  State<AddWebLinkPage> createState() => _WebsiteFormState();
+  State<AddStatisticsPage> createState() => _AddStatisticsPageState();
 }
 
-class _WebsiteFormState extends State<AddWebLinkPage> {
+class _AddStatisticsPageState extends State<AddStatisticsPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _linkController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _countController = TextEditingController();
 
-  final CollectionReference websites =
-      FirebaseFirestore.instance.collection(FirebaseCollection.websites);
+  final CollectionReference diseaseStats =
+      FirebaseFirestore.instance.collection(FirebaseCollection.diseaseStats);
 
   bool _isExpanded = false;
   String? _editingId;
 
-  Future<void> _addOrUpdateWebsite() async {
+  Future<void> _addOrUpdateDisease() async {
     if (_formKey.currentState!.validate()) {
       try {
         final data = {
-          'title': _titleController.text.trim(),
-          'link': _linkController.text.trim(),
+          'disease': _nameController.text.trim(),
+          'count': int.parse(_countController.text.trim()),
           'timestamp': FieldValue.serverTimestamp(),
           'isActive': true,
         };
 
         if (_editingId != null) {
-          await websites.doc(_editingId).update(data);
+          await diseaseStats.doc(_editingId).update(data);
         } else {
-          await websites.add(data);
+          await diseaseStats.add(data);
         }
 
         _clearForm();
@@ -44,8 +44,8 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(_editingId == null
-                  ? 'Website added successfully!'
-                  : 'Website updated successfully!'),
+                  ? 'Disease added successfully!'
+                  : 'Disease updated successfully!'),
             ),
           );
         }
@@ -60,27 +60,27 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
   }
 
   void _clearForm() {
-    _titleController.clear();
-    _linkController.clear();
+    _nameController.clear();
+    _countController.clear();
     setState(() {
       _editingId = null;
       _isExpanded = false;
     });
   }
 
-  Future<void> _deleteWebsite(String id) async {
-    await websites.doc(id).delete();
+  Future<void> _deleteDisease(String id) async {
+    await diseaseStats.doc(id).delete();
   }
 
   Future<void> _toggleIsActive(String id, bool currentStatus) async {
-    await websites.doc(id).update({'isActive': !currentStatus});
+    await diseaseStats.doc(id).update({'isActive': !currentStatus});
   }
 
-  void _editWebsite(DocumentSnapshot doc) {
+  void _editDisease(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     setState(() {
-      _titleController.text = data['title'] ?? '';
-      _linkController.text = data['link'] ?? '';
+      _nameController.text = data['disease'] ?? '';
+      _countController.text = data['count'].toString();
       _editingId = doc.id;
       _isExpanded = true;
     });
@@ -88,8 +88,8 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _linkController.dispose();
+    _nameController.dispose();
+    _countController.dispose();
     super.dispose();
   }
 
@@ -97,7 +97,7 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weblinks Management'),
+        title: const Text('Statistics Management'),
         actions: [
           IconButton(
             icon: Icon(_isExpanded ? Icons.close : Icons.add),
@@ -122,7 +122,7 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _editingId == null ? 'Add New Weblink' : 'Edit Weblink',
+                    _editingId == null ? 'Add New Disease' : 'Edit Disease',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
@@ -134,37 +134,36 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: TextFormField(
-                            controller: _titleController,
+                            controller: _nameController,
                             decoration: const InputDecoration(
-                              labelText: 'Title',
+                              labelText: 'Disease Name',
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 16),
                             ),
                             validator: (value) => value == null || value.isEmpty
-                                ? 'Enter title'
+                                ? 'Enter disease name'
                                 : null,
                           ),
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: TextFormField(
-                            controller: _linkController,
+                            controller: _countController,
                             decoration: const InputDecoration(
-                              labelText: 'Link',
+                              labelText: 'Count',
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 16),
                             ),
+                            keyboardType: TextInputType.number,
                             validator: (value) {
-                              final url = value?.trim() ?? '';
-                              if (url.isEmpty) return 'Enter link';
-                              if (!url.startsWith('http')) {
-                                return 'Must start with http:// or https://';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Enter count';
                               }
-                              final uri = Uri.tryParse(url);
-                              if (uri == null || !uri.isAbsolute) {
-                                return 'Please enter a valid URL';
+                              final count = int.tryParse(value.trim());
+                              if (count == null || count < 0) {
+                                return 'Enter a valid positive number';
                               }
                               return null;
                             },
@@ -175,9 +174,9 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
                           children: [
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _addOrUpdateWebsite,
+                                onPressed: _addOrUpdateDisease,
                                 child: Text(_editingId == null
-                                    ? 'Add Weblink'
+                                    ? 'Add Disease'
                                     : 'Update'),
                               ),
                             ),
@@ -198,11 +197,12 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
                 ],
               ),
 
-            // Website List
+            // Disease List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream:
-                    websites.orderBy('timestamp', descending: true).snapshots(),
+                stream: diseaseStats
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -210,7 +210,7 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
 
                   final docs = snapshot.data!.docs;
                   if (docs.isEmpty) {
-                    return const Center(child: Text('No websites found.'));
+                    return const Center(child: Text('No records found.'));
                   }
 
                   return ListView.builder(
@@ -222,11 +222,11 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
 
                       return Card(
                         child: ListTile(
-                          title: Text(data['title'] ?? 'No Title'),
+                          title: Text(data['disease'] ?? 'No disease'),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(data['link'] ?? ''),
+                              Text("Count: ${data['count'] ?? '0'}"),
                               Text(
                                 "Status: ${isActive ? 'Visible' : 'Hidden'}",
                                 style: TextStyle(
@@ -241,12 +241,12 @@ class _WebsiteFormState extends State<AddWebLinkPage> {
                               IconButton(
                                 icon:
                                     const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editWebsite(doc),
+                                onPressed: () => _editDisease(doc),
                               ),
                               IconButton(
                                 icon:
                                     const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteWebsite(doc.id),
+                                onPressed: () => _deleteDisease(doc.id),
                               ),
                               IconButton(
                                 icon: Icon(

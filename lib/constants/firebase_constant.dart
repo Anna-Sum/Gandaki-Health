@@ -3,9 +3,8 @@ class FirebaseCollection {
   static const String content = 'content';
   static const String feedback = 'feedback';
   static const String users = 'users';
-  static const String videos = 'videos';
   static const String websites = 'websites';
-
+  static const String diseaseStats = 'diseaseStats';
 }
 
 class UserRole {

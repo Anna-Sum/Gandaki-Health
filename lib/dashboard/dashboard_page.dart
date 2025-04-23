@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../customs/app_bar_custom.dart';
-import '../fire.dart';
 import '../route_manager/route_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> _makePhoneCall(String phoneNumber) async {
   final Uri launchUri = Uri(
@@ -67,12 +66,12 @@ class _BlinkingIconState extends State<BlinkingIcon>
           animation: _animation,
           builder: (context, child) {
             return Container(
-              width: widget.size * (1 + _animation.value * 0.5),
-              height: widget.size * (1 + _animation.value * 0.5),
+              width: widget.size * (1 + _animation.value * 0),
+              height: widget.size * (1 + _animation.value * 0),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                // color: widget.color.withOpacity(0.3 * (1 - _animation.value)),
-                color: widget.color.withValues(alpha: 0.3 * (1 - _animation.value)),
+                color: widget.color
+                    .withAlpha(((0.5 * (1 - _animation.value)) * 255).toInt()),
               ),
             );
           },
@@ -92,10 +91,62 @@ class MyDashBoardPage extends StatefulWidget {
 }
 
 class _MyDashBoardPageState extends State<MyDashBoardPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<int> _getTotalAlerts() async {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('alert')
+        .where('active', isEqualTo: true)
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> _getTotalUsers() async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'user')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> _getGeneralUsers(String s) async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'general')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> _getHealthcareProviders(String s) async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'healthcare')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> _getTotalIECs(String s) async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('content')
+        .where('active', isEqualTo: true)
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> _getTotalFeedbacks(String category) async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('feedback')
+        .where('category', isEqualTo: category)
+        .get();
+    return snapshot.docs.length;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: 'Dashboard'),
+      appBar: CustomAppBar(
+        title: 'Dashboard',
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(5.w),
@@ -107,9 +158,9 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                   const Icon(Icons.favorite, color: Colors.red),
                   SizedBox(width: 2.w),
                   Text(
-                    'Admin Dashboard',
+                    'Admin',
                     style:
-                        TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+                        TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   const CircleAvatar(
@@ -119,13 +170,15 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                   ),
                 ],
               ),
-              SizedBox(height: 3.h),
+              SizedBox(height: 2.h),
+
+              // Total Alerts and Total Users
               Row(
                 children: [
                   Expanded(
                     child: Card(
                       child: Padding(
-                        padding: EdgeInsets.all(4.w),
+                        padding: EdgeInsets.all(1.w),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -135,7 +188,7 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                                 Text(
                                   'Total Alerts',
                                   style: TextStyle(
-                                      fontSize: 12.sp,
+                                      fontSize: 14.sp,
                                       fontWeight: FontWeight.bold),
                                 ),
                                 const Icon(Icons.add_alert_sharp,
@@ -143,20 +196,124 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                               ],
                             ),
                             SizedBox(height: 1.h),
-                            StreamBuilder<int>(
-                              stream: myFirebase.countAlertStream(),
+                            FutureBuilder<int>(
+                              future: _getTotalAlerts(),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
                                   return const CircularProgressIndicator();
                                 } else if (snapshot.hasError) {
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
+                                } else {
                                   return Text(
-                                    'Error!',
+                                    snapshot.data == 0
+                                        ? '...'
+                                        : '${snapshot.data}',
                                     style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 16.sp,
+                                        fontSize: 20.sp,
                                         fontWeight: FontWeight.bold),
                                   );
+                                }
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 2.w),
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(1.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total Users',
+                                  style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const Icon(Icons.group, color: Colors.blue),
+                              ],
+                            ),
+                            SizedBox(height: 1.h),
+                            FutureBuilder<int>(
+                              future: _getTotalUsers(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
+                                } else {
+                                  return Text(
+                                    snapshot.data == 0
+                                        ? '...'
+                                        : '${snapshot.data}',
+                                    style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                }
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 3.h),
+
+              // General Users and Healthcare Providers
+              Row(
+                children: [
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(1.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'General Users',
+                                  style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const Icon(Icons.person, color: Colors.blue),
+                              ],
+                            ),
+                            SizedBox(height: 1.h),
+                            FutureBuilder<int>(
+                              future: _getGeneralUsers('general'),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
                                 } else {
                                   return Text(
                                     snapshot.data == 0
@@ -178,7 +335,7 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                   Expanded(
                     child: Card(
                       child: Padding(
-                        padding: EdgeInsets.all(4.w),
+                        padding: EdgeInsets.all(1.w),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -186,29 +343,28 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Total Users',
+                                  'Healthcare Providers',
                                   style: TextStyle(
-                                      fontSize: 12.sp,
+                                      fontSize: 14.sp,
                                       fontWeight: FontWeight.bold),
                                 ),
-                                const Icon(Icons.group, color: Colors.blue),
+                                const Icon(Icons.local_hospital,
+                                    color: Colors.blue),
                               ],
                             ),
                             SizedBox(height: 1.h),
-                            StreamBuilder<int>(
-                              stream: myFirebase.countUserStream(),
+                            FutureBuilder<int>(
+                              future: _getHealthcareProviders('healthcare'),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
                                   return const CircularProgressIndicator();
                                 } else if (snapshot.hasError) {
-                                  return Text(
-                                    'Error!',
-                                    style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.bold),
-                                  );
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
                                 } else {
                                   return Text(
                                     snapshot.data == 0
@@ -229,17 +385,125 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                 ],
               ),
               SizedBox(height: 3.h),
+//Total feedback and Total IECs
+              Row(
+                children: [
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(1.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total IECs',
+                                  style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const Icon(Icons.book, color: Colors.blue),
+                              ],
+                            ),
+                            SizedBox(height: 1.h),
+                            FutureBuilder<int>(
+                              future: _getTotalIECs('true'),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
+                                } else {
+                                  return Text(
+                                    snapshot.data == 0
+                                        ? '...'
+                                        : '${snapshot.data}',
+                                    style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                }
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 2.w),
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(1.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total Feedbacks',
+                                  style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const Icon(Icons.feedback, color: Colors.blue),
+                              ],
+                            ),
+                            SizedBox(height: 1.h),
+                            FutureBuilder<int>(
+                              future: _getTotalFeedbacks('health_portal'),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text('Error!',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold));
+                                } else {
+                                  return Text(
+                                    snapshot.data == 0
+                                        ? '...'
+                                        : '${snapshot.data}',
+                                    style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold),
+                                  );
+                                }
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 3.h),
+
+              // Emergency Services
               Card(
-                color: Colors.red.shade50,
+                color: const Color.fromARGB(255, 247, 196, 206),
                 child: Padding(
                   padding: EdgeInsets.all(4.w),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         'Emergency Services',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: Colors.red,
                             ),
                       ),
                       SizedBox(height: 1.h),
@@ -254,26 +518,21 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                                   padding: EdgeInsets.all(2.w),
                                   child: Column(
                                     children: [
+                                      // Keep the BlinkingIcon widget for animation
                                       BlinkingIcon(
                                         icon: Icons.medical_services,
                                         color: Colors.red,
-                                        size: 6.w,
+                                        size: 10.w,
                                       ),
                                       SizedBox(height: 1.h),
-                                      Text(
-                                        'Hello Doctor',
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '1092',
-                                        style: TextStyle(
-                                          fontSize: 11.sp,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
+                                      Text('Hello Doctor',
+                                          style: TextStyle(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.bold)),
+                                      Text('1092',
+                                          style: TextStyle(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey[600])),
                                     ],
                                   ),
                                 ),
@@ -289,26 +548,21 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                                   padding: EdgeInsets.all(2.w),
                                   child: Column(
                                     children: [
+                                      // Keep the BlinkingIcon widget for animation
                                       BlinkingIcon(
                                         icon: Icons.local_hospital,
                                         color: Colors.red,
-                                        size: 6.w,
+                                        size: 10.w,
                                       ),
                                       SizedBox(height: 1.h),
-                                      Text(
-                                        'Ambulance',
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '102',
-                                        style: TextStyle(
-                                          fontSize: 11.sp,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
+                                      Text('Ambulance',
+                                          style: TextStyle(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.bold)),
+                                      Text('102',
+                                          style: TextStyle(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey[600])),
                                     ],
                                   ),
                                 ),
@@ -321,33 +575,39 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
                   ),
                 ),
               ),
+
               SizedBox(height: 3.h),
+
+              // Quick Actions
               Card(
-                color: Colors.red.shade100,
+                color: const Color.fromARGB(255, 212, 237, 248),
                 child: Padding(
                   padding: EdgeInsets.all(4.w),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.center, // Center the content
                     children: [
                       Text(
                         'Quick Actions',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
                             ),
+                        textAlign: TextAlign.center, // Center the text itself
                       ),
                       SizedBox(height: 1.h),
                       GridView.count(
                         crossAxisCount: 3,
                         shrinkWrap: true,
+                        mainAxisSpacing: 2.h,
+                        crossAxisSpacing: 2.w,
                         physics: const NeverScrollableScrollPhysics(),
                         children: quickActionItems.map((action) {
                           return QuickActionCard(
                             icon: action.icon,
                             label: action.label,
                           );
-                        }).toList(
-                          growable: false,
-                        ),
+                        }).toList(),
                       ),
                     ],
                   ),
@@ -355,51 +615,6 @@ class _MyDashBoardPageState extends State<MyDashBoardPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class DashboardCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const DashboardCard({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(4.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style:
-                      TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
-                ),
-                Icon(icon, color: color),
-              ],
-            ),
-            SizedBox(height: 1.h),
-            Text(
-              value,
-              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
-            ),
-          ],
         ),
       ),
     );
@@ -436,21 +651,22 @@ class QuickActionCard extends StatelessWidget {
       },
       child: Card(
         child: Padding(
-          padding: EdgeInsets.all(4.w),
+          padding: EdgeInsets.all(2.w),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: colors[quickActionItems.indexOf(quickActionItems
-                    .firstWhere((element) => element.label == label))],
+                color: colors[quickActionItems
+                    .indexWhere((element) => element.label == label)],
                 size: 5.w,
               ),
               SizedBox(height: 1.h),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -481,27 +697,12 @@ List<QuickActionModel> quickActionItems = [
     routeName: RouteNames.alertAddPage,
   ),
   QuickActionModel(
-    label: 'New Content',
+    label: 'New IECs',
     icon: Icons.file_copy,
     routeName: RouteNames.addNewContentPage,
   ),
   QuickActionModel(
-    label: 'Add Video',
-    icon: Icons.play_circle_filled_outlined,
-    routeName: RouteNames.addVideoPage,
-  ),
-  QuickActionModel(
-    label: 'Feedback',
-    icon: Icons.feedback,
-    routeName: RouteNames.feedbackPage,
-  ),
-  QuickActionModel(
-    label: 'Add Web Link',
-    icon: Icons.language,
-    routeName: RouteNames.addWebLinkPage,
-  ),
-  QuickActionModel(
-    label: 'Add Hospitals',
+    label: 'Add Resources',
     icon: Icons.local_hospital,
     routeName: RouteNames.addHospitalPage,
   ),

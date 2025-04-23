@@ -27,15 +27,18 @@ class _MySplashScreenState extends ConsumerState<MySplashPage>
       vsync: this,
     );
 
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller)
-      ..addListener(() {
+    _animation = Tween<double>(begin: 1.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    )..addListener(() {
         setState(() {});
       });
 
     _controller.forward().whenComplete(() {
       stayHere
           ? _controller.repeat()
-          
           : Navigator.pushNamed(context, RouteNames.loginPage);
     });
   }
@@ -49,37 +52,42 @@ class _MySplashScreenState extends ConsumerState<MySplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.lightBlue[100],
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/splash_screen/bridge.jpg',
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 20.h,
-            left: 10.w,
-            right: 10.w,
-            child: _buildGradientText(
-              colors: [
-                Colors.white.withAlpha(80),
-                Colors.white,
-                Colors.white.withAlpha(80),
-              ],
-              child: Center(
-                child: Text(
-                  'Health Portal App',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                    fontFeatures: [
-                      FontFeature.enable('smcp'),
-                    ],
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScaleTransition(
+                  scale: _animation,
+                  child: Image.asset(
+                    'assets/splash_screen/emblem.png',
+                    width: 40.w,
+                    height: 40.w,
+                    fit: BoxFit.contain,
                   ),
                 ),
-              ),
+                SizedBox(height: 3.h),
+                _buildGradientText(
+                  colors: [
+                    Colors.white.withAlpha(80),
+                    Colors.white,
+                    Colors.white.withAlpha(80),
+                  ],
+                  child: Text(
+                    'Gandaki Health Alert',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                      fontFeatures: [
+                        FontFeature.enable('smcp'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Positioned(
@@ -87,17 +95,18 @@ class _MySplashScreenState extends ConsumerState<MySplashPage>
             left: 10.w,
             right: 10.w,
             child: Center(
-                child: Text(
-              'Loading...',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 16.sp,
-                fontFeatures: [
-                  FontFeature.enable('smcp'),
-                ],
+              child: Text(
+                'Loading...',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontFeatures: [
+                    FontFeature.enable('smcp'),
+                  ],
+                ),
               ),
-            )),
+            ),
           ),
           Positioned(
             bottom: 10.h,
@@ -112,7 +121,7 @@ class _MySplashScreenState extends ConsumerState<MySplashPage>
 
   LinearProgressIndicator _buildLinearProgressIndicator() {
     return LinearProgressIndicator(
-      value: _animation.value,
+      value: _controller.value,
       minHeight: 0.6.h,
       backgroundColor: Colors.white,
       valueColor: AlwaysStoppedAnimation<Color>(MyAppColors.primaryColor),

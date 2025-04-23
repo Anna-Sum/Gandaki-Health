@@ -29,6 +29,8 @@ class MyFirebase {
           "uid": user.uid,
           "name": name,
           "email": email,
+          "usertype": "general", // default
+          "role": "user", // default
           "createdAt": FieldValue.serverTimestamp(),
         });
 
@@ -59,6 +61,21 @@ class MyFirebase {
     try {
       return FirebaseFirestore.instance
           .collection("alert")
+          .snapshots()
+          .map((snapshot) => snapshot.docs.length);
+    } catch (e) {
+      if (kDebugMode) {
+        log("Error: $e");
+      }
+    }
+    return Stream.value(0);
+  }
+
+  Stream<int> countUsersByType(String type) {
+    try {
+      return FirebaseFirestore.instance
+          .collection("users")
+          .where("usertype", isEqualTo: type)
           .snapshots()
           .map((snapshot) => snapshot.docs.length);
     } catch (e) {

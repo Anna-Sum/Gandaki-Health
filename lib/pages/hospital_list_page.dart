@@ -2,178 +2,288 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../constants/constant.dart';
-import '../customs/app_bar_custom.dart';
-
-class HospitalListPage extends StatelessWidget {
+class HospitalListPage extends StatefulWidget {
   static const routeName = '/HospitalListPage';
 
   const HospitalListPage({super.key});
 
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    } else {
-      throw 'Could not launch $phoneUri';
+  @override
+  State<HospitalListPage> createState() => _HospitalListPageState();
+}
+
+class _HospitalListPageState extends State<HospitalListPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'All';
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'Unknown date';
+    final date = timestamp.toDate();
+    return "${date.day.toString().padLeft(2, '0')}/"
+        "${date.month.toString().padLeft(2, '0')}/"
+        "${date.year} ${date.hour.toString().padLeft(2, '0')}:"
+        "${date.minute.toString().padLeft(2, '0')}";
+  }
+
+  bool _isValidPhoneNumber(String phoneNumber) {
+    final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
+    return phoneRegex.hasMatch(phoneNumber);
+  }
+
+  Future<void> _callPhone(String phoneNumber) async {
+    if (!_isValidPhoneNumber(phoneNumber)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid phone number')),
+      );
+      return;
+    }
+
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        if (!mounted) return;
+        await launchUrl(launchUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not place a call')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        if (!mounted) return;
+        await launchUrl(emailUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open email client')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _launchWebsite(String website) async {
+    final Uri websiteUri = Uri.parse(website);
+    try {
+      if (await canLaunchUrl(websiteUri)) {
+        if (!mounted) return;
+        await launchUrl(websiteUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open website')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    Query<Map<String, dynamic>> hospitalQuery = FirebaseFirestore.instance
+        .collection('hospitals')
+        .where('isActive', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .limit(50);
+
+    if (_selectedCategory != 'All') {
+      hospitalQuery =
+          hospitalQuery.where('resourceType', isEqualTo: _selectedCategory);
+    }
+
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Hospitals',
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
-          ),
-        ),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('hospitals')
-              .orderBy('timestamp', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: TextStyle(color: Colors.red.shade700),
-                ),
-              );
-            }
-
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                ),
-              );
-            }
-
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.local_hospital_outlined,
-                      size: 60,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No hospitals found',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: snapshot.data!.docs.length,
-              itemBuilder: (context, index) {
-                var hospital = snapshot.data!.docs[index];
-                return _buildHospitalCard(context, hospital);
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHospitalCard(
-      BuildContext context, QueryDocumentSnapshot hospital) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: MyAppColors.primaryColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.local_hospital,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    hospital['hospitalName'],
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: MyAppColors.primaryColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.person, hospital['superintendent'], false),
-            _buildInfoRow(Icons.location_on, hospital['district'], false),
-            _buildInfoRow(Icons.phone, hospital['phone'], true),
-            _buildInfoRow(Icons.email, hospital['email'], false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text, bool isPhone) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
+      body: Column(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: MyAppColors.primaryColor,
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search hospitals...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
           ),
-          const SizedBox(width: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonFormField<String>(
+              value: _selectedCategory,
+              items: [
+                'All',
+                'Private Hospital',
+                'Province Hospital',
+                'Aayurved Hospital',
+                'Province Public Health Office'
+              ]
+                  .map((category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategory = value!;
+                });
+              },
+              decoration: const InputDecoration(
+                labelText: 'Filter by Category',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
           Expanded(
-            child: isPhone
-                ? GestureDetector(
-                    onTap: () => _makePhoneCall(text),
-                    child: Text(
-                      text,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: MyAppColors.primaryColor,
-                        decoration: TextDecoration.underline,
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: hospitalQuery.snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No hospitals available.'));
+                }
+
+                final hospitalList = snapshot.data!.docs.where((doc) {
+                  final data = doc.data();
+                  final name =
+                      data['hospitalName']?.toString().toLowerCase() ?? '';
+                  final type =
+                      data['resourceType']?.toString().toLowerCase() ?? '';
+                  return name.contains(_searchQuery) ||
+                      type.contains(_searchQuery);
+                }).toList();
+
+                if (hospitalList.isEmpty) {
+                  return const Center(
+                      child: Text('No hospitals match the filters.'));
+                }
+
+                return ListView.builder(
+                  itemCount: hospitalList.length,
+                  itemBuilder: (context, index) {
+                    final hospital = hospitalList[index];
+                    final data = hospital.data();
+                    final name = data['hospitalName'] ?? '';
+                    final type = data['resourceType'] ?? '';
+                    final district = data['district'] ?? '';
+                    final timestamp = data['timestamp'] as Timestamp?;
+                    final superintendent = data['superintendent'] ?? '';
+                    final phoneNumber = data['phone'] ?? '';
+                    final email = data['email'] ?? '';
+                    final website = data['website'] ?? '';
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  )
-                : Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Type: $type'),
+                            Text('District: $district'),
+                            Text('Superintendent: $superintendent'),
+                            const SizedBox(height: 8),
+                            Text('Phone: $phoneNumber'),
+                            GestureDetector(
+                              onTap: () => _launchEmail(email),
+                              child: Text(
+                                email,
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _launchWebsite(website),
+                              child: Text(
+                                website,
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  formatTimestamp(timestamp),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: Colors.grey),
+                                ),
+                                Chip(
+                                  label: Text(type),
+                                  backgroundColor: Colors.blueAccent,
+                                  labelStyle:
+                                      const TextStyle(color: Colors.white),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.phone),
+                                  onPressed: () => _callPhone(phoneNumber),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

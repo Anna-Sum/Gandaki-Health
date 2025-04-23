@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Constant {
-  static const String appName = 'Health Portal';
+  static const String appName = 'Gandaki Health Alert';
 }
 
 class MyAppColors {
